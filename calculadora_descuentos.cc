@@ -1,20 +1,11 @@
 #include <iostream>
-#include <iomanip>
-
-// ============================================================
-//  ESTRUCTURAS DE DATOS ESTÁTICAS
-// ============================================================
-
-// Máximo de productos permitidos por sesión (arreglo estático)
 const int MAX_PRODUCTOS = 50;
 
-// Enumeración para distinguir el tipo de cálculo realizado
 enum TipoDescuento {
     POR_PORCENTAJE,
     POR_CANTIDAD_FIJA
 };
 
-// Struct que agrupa todos los datos de un producto calculado
 struct Producto {
     double precio_original;
     double descuento_aplicado;
@@ -23,16 +14,125 @@ struct Producto {
     TipoDescuento tipo;
 };
 
-// Arreglo estático global que actúa como historial de la sesión
 Producto historial[MAX_PRODUCTOS];
-int total_registros = 0;     // Cuántos productos se han procesado
+int total_registros = 0;
+
+void imprimir_double(double valor) {
+    if (valor < 0.0) {
+        std::cout << '-';
+        valor = -valor;
+    }
+
+  
+    long long entero = static_cast<long long>(valor);
+
+   
+    long long centavos = static_cast<long long>((valor - entero) * 100.0 + 0.5);
+
+    // Si el redondeo sube los centavos a 100, ajustamos
+    if (centavos >= 100) {
+        entero++;
+        centavos -= 100;
+    }
+
+    std::cout << entero << '.';
+    if (centavos < 10) std::cout << '0';
+    std::cout << centavos;
+}
+
+bool es_precio_valido(double precio) {
+    return precio > 0.0;
+}
+bool es_porcentaje_valido(double porcentaje) {
+    return porcentaje >= 0.0 && porcentaje <= 100.0;
+}
+
+bool es_descuento_fijo_valido(double precio, double descuento) {
+    return descuento > 0.0 && descuento < precio;
+}
 
 
-// ============================================================
-//  FUNCIONES AUXILIARES
-// ============================================================
 
-// Guarda un producto en el historial (si hay espacio)
+void calcular_por_porcentaje(Producto& p) {
+    p.descuento_aplicado = (p.precio_original * p.porcentaje) / 100.0;
+    p.precio_final       = p.precio_original - p.descuento_aplicado;
+}
+
+void calcular_por_cantidad_fija(Producto& p) {
+    p.precio_final = p.precio_original - p.descuento_aplicado;
+    p.porcentaje   = (p.descuento_aplicado / p.precio_original) * 100.0;
+}
+
+
+
+int leer_cantidad_productos() {
+    int cantidad;
+    std::cout << "Cuántos productos desea calcular? ";
+    std::cin >> cantidad;
+    return cantidad;
+}
+
+
+void leer_datos_porcentaje(Producto& p, int i, int total) {
+    std::cout << "\n--- Producto " << i << " de " << total << " ---\n";
+    std::cout << "Precio original del producto: $";
+    std::cin >> p.precio_original;
+    std::cout << "Porcentaje de descuento (%): ";
+    std::cin >> p.porcentaje;
+    p.tipo = POR_PORCENTAJE;
+}
+
+
+void leer_datos_cantidad_fija(Producto& p, int i, int total) {
+    std::cout << "\n--- Producto " << i << " de " << total << " ---\n";
+    std::cout << "Precio original del producto: $";
+    std::cin >> p.precio_original;
+    std::cout << "Cantidad de descuento a aplicar: $";
+    std::cin >> p.descuento_aplicado;
+    p.tipo = POR_CANTIDAD_FIJA;
+}
+
+
+void mostrar_resultado_porcentaje(const Producto& p) {
+    std::cout << "\n--- Resultado ---\n";
+    std::cout << "Descuento aplicado : $"; imprimir_double(p.descuento_aplicado); std::cout << "\n";
+    std::cout << "Precio final       : $"; imprimir_double(p.precio_final);       std::cout << "\n";
+}
+
+
+void mostrar_resultado_cantidad_fija(const Producto& p) {
+    std::cout << "\n--- Resultado ---\n";
+    std::cout << "Precio a pagar     : $"; imprimir_double(p.precio_final); std::cout << "\n";
+    std::cout << "Porcentaje ahorrado: ";  imprimir_double(p.porcentaje);   std::cout << "%\n";
+}
+void mostrar_fila_historial(const Producto& p, int indice) {
+    std::cout << "\n  [" << indice << "] "
+              << (p.tipo == POR_PORCENTAJE
+                  ? "Descuento por porcentaje"
+                  : "Descuento por cantidad fija") << "\n";
+    std::cout << "      Precio original : $"; imprimir_double(p.precio_original);    std::cout << "\n";
+    std::cout << "      Descuento        : $"; imprimir_double(p.descuento_aplicado); std::cout << "\n";
+    std::cout << "      Porcentaje       : ";  imprimir_double(p.porcentaje);         std::cout << "%\n";
+    std::cout << "      Precio final     : $"; imprimir_double(p.precio_final);       std::cout << "\n";
+}
+
+
+void mostrar_historial() {
+    if (total_registros == 0) {
+        std::cout << "\nNo hay productos registrados en esta sesión.\n";
+        return;
+    }
+
+    std::cout << "             HISTORIAL DE LA SESIÓN\n";
+    for (int i = 0; i < total_registros; i++) {
+        mostrar_fila_historial(historial[i], i + 1);
+    }
+    std::cout << "  Total de productos calculados: " << total_registros << "\n";
+   
+}
+
+
+
 void guardar_en_historial(Producto p) {
     if (total_registros < MAX_PRODUCTOS) {
         historial[total_registros] = p;
@@ -43,149 +143,72 @@ void guardar_en_historial(Producto p) {
     }
 }
 
-// Muestra el resumen completo de la sesión usando el arreglo estático
-void mostrar_historial() {
-    if (total_registros == 0) {
-        std::cout << "\nNo hay productos registrados en esta sesión.\n";
-        return;
-    }
-
-    std::cout << "\n\n";
-    std::cout << "============================================================\n";
-    std::cout << "             HISTORIAL DE LA SESIÓN\n";
-    std::cout << "============================================================\n";
-    std::cout << std::fixed << std::setprecision(2);
-
-    for (int i = 0; i < total_registros; i++) {
-        Producto& p = historial[i];
-        std::cout << "\n  [" << (i + 1) << "] "
-                  << (p.tipo == POR_PORCENTAJE
-                      ? "Descuento por porcentaje"
-                      : "Descuento por cantidad fija") << "\n";
-        std::cout << "      Precio original : $" << p.precio_original    << "\n";
-        std::cout << "      Descuento        : $" << p.descuento_aplicado << "\n";
-        std::cout << "      Porcentaje       : "  << p.porcentaje         << "%\n";
-        std::cout << "      Precio final     : $" << p.precio_final       << "\n";
-    }
-
-    std::cout << "\n------------------------------------------------------------\n";
-    std::cout << "  Total de productos calculados: " << total_registros << "\n";
-    std::cout << "============================================================\n";
-}
 
 
-// ============================================================
-//  FLUJOGRAMA 1 — Descuento por porcentaje
-// ============================================================
 void flujograma1() {
-    int cantidad;
-
-    std::cout << "\n========================================\n";
     std::cout << "  FLUJOGRAMA 1: Descuento por porcentaje\n";
-    std::cout << "========================================\n";
 
-    std::cout << "¿Cuántos productos desea calcular? ";
-    std::cin >> cantidad;
+    int cantidad = leer_cantidad_productos();
 
     for (int i = 1; i <= cantidad; i++) {
-        std::cout << "\n--- Producto " << i << " de " << cantidad << " ---\n";
-
-        // Usamos un struct para capturar los datos de entrada
         Producto p;
-        p.tipo = POR_PORCENTAJE;
 
-        std::cout << "Precio original del producto: $";
-        std::cin >> p.precio_original;
-        std::cout << "Porcentaje de descuento (%): ";
-        std::cin >> p.porcentaje;
+        leer_datos_porcentaje(p, i, cantidad);
 
-        // Decisión: validar datos
-        if (p.precio_original > 0 && p.porcentaje >= 0 && p.porcentaje <= 100) {
-
-            // Proceso: calcular y completar el struct
-            p.descuento_aplicado = (p.precio_original * p.porcentaje) / 100.0;
-            p.precio_final       = p.precio_original - p.descuento_aplicado;
-
-            std::cout << std::fixed << std::setprecision(2);
-            std::cout << "\n--- Resultado ---\n";
-            std::cout << "Descuento aplicado : $" << p.descuento_aplicado << "\n";
-            std::cout << "Precio final       : $" << p.precio_final       << "\n";
-
-            // Guardar el struct completo en el arreglo estático
-            guardar_en_historial(p);
-
-        } else {
-            std::cout << "\nDatos inválidos. Precio debe ser > 0 y descuento entre 0 y 100.\n";
-            i--;    // Repetir este intento
+        if (!es_precio_valido(p.precio_original) ||
+            !es_porcentaje_valido(p.porcentaje)) {
+            std::cout << "\nDatos inválidos. Precio debe ser > 0 "
+                         "y descuento entre 0 y 100.\n";
+            i--;
+            continue;
         }
+
+        calcular_por_porcentaje(p);
+        mostrar_resultado_porcentaje(p);
+        guardar_en_historial(p);
     }
 }
 
-
-// ============================================================
-//  FLUJOGRAMA 2 — Descuento por cantidad fija
-// ============================================================
 void flujograma2() {
-    int cantidad;
-
-    std::cout << "\n==========================================\n";
     std::cout << "  FLUJOGRAMA 2: Descuento de cantidad fija\n";
-    std::cout << "==========================================\n";
 
-    std::cout << "¿Cuántos productos desea calcular? ";
-    std::cin >> cantidad;
+    int cantidad = leer_cantidad_productos();
 
     for (int i = 1; i <= cantidad; i++) {
-        std::cout << "\n--- Producto " << i << " de " << cantidad << " ---\n";
-
-        // Usamos un struct para capturar los datos de entrada
         Producto p;
-        p.tipo = POR_CANTIDAD_FIJA;
 
-        std::cout << "Precio original del producto: $";
-        std::cin >> p.precio_original;
-        std::cout << "Cantidad de descuento a aplicar: $";
-        std::cin >> p.descuento_aplicado;
+        leer_datos_cantidad_fija(p, i, cantidad);
 
-        // Proceso: calcular precio final
-        p.precio_final = p.precio_original - p.descuento_aplicado;
-
-        // Decisión: precio final debe ser positivo
-        if (p.precio_final > 0 && p.precio_original > 0) {
-
-            p.porcentaje = (p.descuento_aplicado / p.precio_original) * 100.0;
-
-            std::cout << std::fixed << std::setprecision(2);
-            std::cout << "\n--- Resultado ---\n";
-            std::cout << "Precio a pagar    : $" << p.precio_final       << "\n";
-            std::cout << "Porcentaje ahorrado: " << p.porcentaje         << "%\n";
-
-            // Guardar el struct completo en el arreglo estático
-            guardar_en_historial(p);
-
-        } else {
-            std::cout << "\nDatos inválidos. El descuento no puede ser mayor o igual al precio.\n";
-            i--;    // Repetir este intento
+        if (!es_precio_valido(p.precio_original) ||
+            !es_descuento_fijo_valido(p.precio_original, p.descuento_aplicado)) {
+            std::cout << "\nDatos inválidos. El descuento no puede "
+                         "ser mayor o igual al precio.\n";
+            i--;
+            continue;
         }
+
+        calcular_por_cantidad_fija(p);
+        mostrar_resultado_cantidad_fija(p);
+        guardar_en_historial(p);
     }
 }
 
-
-// ============================================================
-//  PROGRAMA PRINCIPAL
-// ============================================================
-int main() {
+int mostrar_menu() {
     int opcion;
-
+    std::cout << "\n1. Flujograma 1 (descuento por porcentaje)\n";
+    std::cout << "2. Flujograma 2 (descuento por cantidad fija)\n";
+    std::cout << "3. Ver historial de la sesion\n";
+    std::cout << "0. Salir\n";
+    std::cout << "Opcion: ";
+    std::cin >> opcion;
+    return opcion;
+}
+int main() {
     std::cout << "=== Sistema de Cálculo de Descuentos ===\n";
 
+    int opcion;
     do {
-        std::cout << "\n1. Flujograma 1 (descuento por porcentaje)\n";
-        std::cout << "2. Flujograma 2 (descuento por cantidad fija)\n";
-        std::cout << "3. Ver historial de la sesión\n";
-        std::cout << "0. Salir\n";
-        std::cout << "Opción: ";
-        std::cin >> opcion;
+        opcion = mostrar_menu();
 
         switch (opcion) {
             case 1: flujograma1();       break;
